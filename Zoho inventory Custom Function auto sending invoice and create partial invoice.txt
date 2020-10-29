@@ -1,0 +1,142 @@
+
+salesorderID = salesorder.get("salesorder_id");
+salesorderdate = salesorder.get("date").toDate();
+organizationID = organization.get("organization_id");
+res = invokeurl
+[
+	url :"https://inventory.zoho.com.au/api/v1/salesorders/" + salesorderID + "?organization_id=" + organizationID
+	type :GET
+	connection:"zinventory"
+];
+info res;
+sal = res.get("salesorder");
+packlist = List();
+packs = sal.get("packages").toList();
+packsize = packs.size();
+lineitems = sal.get("line_items").toList();
+initiallist = List();
+for each  line in lineitems
+{
+	gmap = Map();
+	gmap.put("so_itemid",line.get("line_item_id"));
+	gmap.put("total_packed_qty",0);
+	initiallist.add(gmap);
+}
+for each  pack in packs
+{
+	pack_id = pack.get("package_id");
+	packinfo = invokeurl
+	[
+		url :"https://inventory.zoho.com.au/api/v1/packages/" + pack_id + "?organization_id=" + organizationID
+		type :GET
+		connection:"zinventory"
+	];
+	pack_det = packinfo.get("package");
+	packitems = pack_det.get("line_items");
+	for each  pi in packitems
+	{
+		for each  init in initiallist
+		{
+			if(init.get("so_itemid") == pi.get("so_line_item_id"))
+			{
+				temp = init.get("total_packed_qty");
+				new_qty = temp + pi.get("quantity");
+				init.put("total_packed_qty",new_qty);
+			}
+		}
+	}
+}
+info initiallist;
+//comparing packed with the sales order
+proceed_flag = List();
+for each  initial in initiallist
+{
+	tot_pkd = initial.get("total_packed_qty");
+	info tot_pkd;
+	info initial;
+	if(tot_pkd > 0)
+	{
+		for each  lin in lineitems
+		{
+			if(initial.get("so_itemid") == lin.get("line_item_id"))
+			{
+				info "hi";
+				if(tot_pkd <= lin.get("quantity") && tot_pkd >= lin.get("quantity_packed") && tot_pkd > lin.get("quantity_invoiced"))
+				{
+					info "hell";
+					proceed_flag.add("true");
+				}
+				else
+				{
+					proceed_flag.add("no");
+				}
+			}
+		}
+	}
+}
+if(proceed_flag.contains("true"))
+{
+	//create invoice
+	index_val = packsize - 1;
+	packinv = invokeurl
+	[
+		url :"https://inventory.zoho.com.au/api/v1/packages/" + pack_id + "?organization_id=" + organizationID
+		type :GET
+		connection:"zinventory"
+	];
+	pack_inv = packinfo.get("package");
+	invitems = pack_inv.get("line_items");
+	invlist = List();
+	for each  inv in invitems
+	{
+		smap = Map();
+		smap.put("salesorder_item_id",inv.get("so_line_item_id"));
+		smap.put("quantity",inv.get("quantity"));
+		smap.put("item_id",inv.get("item_id"));
+		invlist.add(smap);
+	}
+	bson = Map();
+	bson.put("line_items",invlist);
+	bson.put("customer_id",salesorder.get("customer_id"));
+	fin = zoho.inventory.createRecord("Invoices",organizationID,bson);
+	info fin.toMap().get("message");
+	//sent mail script
+	inv = fin.get("invoice");
+	invoiceID = inv.get("invoice_id");
+	contact_persons_details = inv.get("contact_persons_details");
+	ListEmails = List();
+	for each  contact in contact_persons_details
+	{
+		if(contact.get("is_primary_contact") == true)
+		{
+			emailTo = contact.get("email");
+			ListEmails.add(emailTo);
+		}
+	}
+	info ListEmails;
+	jsonstring = Map();
+	jsonstring.put("to_mail_ids",ListEmails);
+	pparams = Map();
+	pparams.put("JSONString",jsonstring);
+	mailResp = invokeurl
+	[
+		url :" https://inventory.zoho.com.au/api/v1/invoices/" + invoiceID + "/email?organization_id=" + organizationID
+		type :POST
+		parameters:pparams
+		connection:"zinventory"
+	];
+	info mailResp.get("message");
+	//marking as sent//
+	invoicedate = inv.get("date").toDate();
+	respond = invokeurl
+	[
+		url :"https://inventory.zoho.com.au/api/v1/invoices/" + invoiceID + "/status/sent?organization_id=" + organizationID
+		type :POST
+		connection:"zinventory"
+	];
+	info respond.get("message");
+}
+else
+{
+	info "fail";
+}
