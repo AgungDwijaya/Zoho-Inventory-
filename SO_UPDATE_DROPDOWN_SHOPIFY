@@ -1,0 +1,48 @@
+//When sales order is created.
+salesorderID = salesorder.get("salesorder_id");
+salesorderdate = salesorder.get("date").toDate();
+salesorderref = salesorder.get("reference_number");
+info salesorderref;
+organizationID = organization.get("organization_id");
+sal = invokeurl
+[
+url :"https://inventory.zoho.com/api/v1/salesorders/" + salesorderID + "?organization_id=" +
+organizationID
+type :GET
+connection:"zom"
+];
+temp = sal.get("salesorder");
+info temp;
+channel=temp.get("sales_channel");
+info channel;
+if (!channel.containsIgnoreCase("direct_sales"))
+{
+cfmap= Map();
+cfmap.put("label","Dropdown");
+cfmap.put("value","Online");
+}
+else
+{
+cfmap= Map();
+cfmap.put("label","Dropdown");
+cfmap.put("value","Offline");
+}
+info cfmap;
+cflist=List();
+cflist.add(cfmap);
+params=Map();
+params.put("customer_id",salesorder.get("customer_id"));
+params.put("custom_fields",cflist);
+//info params;
+bson=Map();
+bson.put("JSONString",params);
+//info bson;
+sal1 = invokeurl
+[
+url :"https://inventory.zoho.com/api/v1/salesorders/" + salesorderID + "?organization_id=" +
+organizationID
+type :PUT
+parameters : bson
+connection:"zom"
+];
+info sal1;
