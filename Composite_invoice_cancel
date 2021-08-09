@@ -1,0 +1,39 @@
+
+invoiceID = invoice.get("invoice_id");
+invoicedate = invoice.get("date").toDate();
+organizationID = organization.get("organization_id");
+getInvoice = invokeurl
+[
+	url :"https://inventory.zoho.com.au/api/v1/invoices/" + invoiceID + "?organization_id=" + organizationID
+	type :GET
+	connection:"zom"
+];
+//info getInvoice;
+invoiceData = getInvoice.get("invoice");
+//info invoiceData;
+invoice_id = invoiceData.get("invoice_id");
+//info invoice_id;
+adjustItem = invokeurl
+[
+	url :"https://inventory.zoho.com.au/api/v1/inventoryadjustments?organization_id=" + organizationID
+	type :GET
+	connection:"zom"
+];
+inventory_adjustments = adjustItem.get("inventory_adjustments");
+//info inventory_adjustments;
+for each  adjustment in inventory_adjustments
+{
+	reference_number = adjustment.get("reference_number");
+	if(reference_number == invoice_id)
+	{
+		inventory_adjustment_id = adjustment.get("inventory_adjustment_id");
+		deleteItem = invokeurl
+		[
+			url :"https://inventory.zoho.com.au/api/v1/inventoryadjustments/" + {inventory_adjustment_id} + "?organization_id=" + organizationID
+			type :DELETE
+			connection:"zom"
+		];
+		info deleteItem;
+	}
+}
+
