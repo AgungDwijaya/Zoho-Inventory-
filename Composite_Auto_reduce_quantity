@@ -1,0 +1,121 @@
+
+purchaseorderID = purchaseorder.get("purchaseorder_id");
+//purchaseorderdate = purchaseorder.get("date").toDate();
+organizationID = organization.get("organization_id");
+po = invokeurl
+[
+	url :"https://inventory.zoho.com.au/api/v1/purchaseorders/" + purchaseorderID + "?organization_id=" + organizationID
+	type :GET
+	connection:"zom"
+];
+//info po;
+purchaseorder = po.get("purchaseorder");
+line_items = purchaseorder.get("line_items");
+//info line_items;
+for each  items in line_items
+{
+	compositeItemID = items.get("item_id");
+	name = items.get("name");
+	compositeQuantity = items.get("quantity");
+	//connection to composite
+	getItem = invokeurl
+	[
+		url :"https://inventory.zoho.com.au/api/v1/compositeitems/" + compositeItemID + "?organization_id=" + organizationID
+		type :GET
+		connection:"zom"
+	];
+	info getItem;
+	composite_item = getItem.get("composite_item");
+	mapped_items = composite_item.get("composite_component_items");
+	info mapped_items;
+	for each  componentItem in mapped_items
+	{
+		quantityComponent = componentItem.get("quantity");
+		stock_on_hand = componentItem.get("stock_on_hand");
+		componentName = componentItem.get("name");
+		componentId = componentItem.get("item_id");
+		componentSku = componentItem.get("sku");
+		qty = quantityComponent * compositeQuantity;
+		info qty;
+		currentdate = zoho.currentdate.toString("YYYY-MM-dd");
+		info currentdate;
+		reason = "compositeitems-onpurchase";
+		items = Map();
+		items.put("item_id",componentId);
+		items.put("quantity_adjusted",qty);
+		lineItems = List();
+		lineItems.add(items);
+		json = Map();
+		json.put("date",currentdate);
+		json.put("reason",reason);
+		json.put("line_items",lineItems);
+		param = Map();
+		param.put("JSONString",json);
+		info param;
+		adjustItem = invokeurl
+		[
+			url :"https://inventory.zoho.com.au/api/v1/inventoryadjustments?organization_id=" + organizationID
+			type :POST
+			parameters:param
+			connection:"zom"
+		];
+		info adjustItem;
+		/*
+		mappedSku = {"8294595311-1","8294596311-1","8294598311-1","8294710111-1","8295511011-1","8295535111-1","8295600111-1","8295610111-1","8295650111-1","8295902011-1","8299501011-1","8299502011-1","8299512011-1","8299522011-1","8299592011-1","8299701011-1","8299702011-1","8999000211-1","8999100211-1","2468002512","2468002518","2468002522","2468002525","2468002532","2468002540","2468002560","2468002580","246CQ05012","246CQ05015","246CQ05018","246CQ05022","246CQ05025","246CQ05032","246CQ05040","246CQ05041","246CQ05051","246CQ05061","246CQ05080","5020305012","5020305015","5020305018","5020305025","5020305032","5020305041","5020305080","5023205012","5023205015","5023205018","5023205025","5023205032","5023205041","5224105012","5224105015","5224105018","5224105025","5224105032","5224105041","5224105080","5412905012","5412905018","5412905025","5412905032","5412905041","5412905080","5414905012","5414905018","5414905025","5414905032","5414905041","5414905051","5414905080","5415005012","5415005018","5415005025","5415005032","5415005041","5415005051","5415005061","5415005080","5417805012","5417805018","5417805025","5417805032","5417805041","5417805051","5417805080","5420305012","5420305018","5420305025","5420305032","5420305041","5420305051","5420305061","5420305080","5420305081","5420305092","5421905012","5421905018","5421905025","5421905080","5422302512","5422302515","5422302518","5422302525","5422302580","5423205010","5423205012","5423205015","5423205018","5423205025","5423205032","5423205041","5423205051","5423205061","5423205080","5423205081","5423205092","5424105010","5424105012","5424105015","5424105018","5424105022","5424105025","5424105032","5424105041","5424105051","5424105061","5424105080","5424105081","5424105092","5425205012","5425205018","5425205025","5425205032","545BI001123R-1m","545BI001183R-1m","545BI001253R-1m","545BI001323R-1m","545BI001413R-1m","545BI001613R-1m","545BI001803R-1m","545BY001123R-1m","545BY001183R-1m","545BY001253R-1m","545BY001323R-1m","545BY001413R-1m","545BY001613R-1m","545BY001803R-1m","8019002037","8019002094","8019002095","8024101037","8024101094","810102560","810105010","810105012","810105015","810105018","810105022","810105025","810105032","810105041","810105051","810105061","810105092","811105093","811105094","811105095","811105096","8111202537","8111202581","8111202594","8111202596","8A20302018","8A20302037","8A20302051","8A20302061","8A20302092","8A20302095","8A20302097","8A20302098","8A23202018","8A23202037","8A23202051","8A23202061","8A23202092","8A24102018","8A24102037","8A24102051","8A24102061","8A24102092","8A24102095","8A24102097","8A24102098","AC15005012","AC15005015","AC15005018","AC15005025","AC15005032","AC15005041","AC15005051","AC15005061","AC15005080","AC15005081","AC17805010","AC17805012","AC17805015","AC17805018","AC17805025","AC17805032","AC17805041","AC17805080","AC20305012","AC20305015","AC20305018","AC20305025","AC20305032","AC20305041","AC20305051","AC20305061","AC20305080","AC20305081","AC20305092","AC23205012","AC23205018","AC23205025","AC23205032","AC23205041","AC23205051","AC23205080","AC23205081","AC24105012","AC24105015","AC24105018","AC24105025","AC24105032","AC24105041","AC24105051","AC24105061","AC24105080","AC24105081","AH22302512","AH22302540","AH22302560","AH22302580","AH23202512","AH23202540","AH23202560","AH23202580","AH24102512","AH24102540","AH24102560","AH24102580","FM61105093","FM61105094","FM61105095","FM61105096","MID6502022AN","8999180111","MIN6519411","8992510311","MID3530201AN","8295610111","8299502011","MIN6529211","8292502511","MIN6532011","8295530111-1"};
+		
+		*/
+		/*
+		if(componentSku = mappedSku)
+		{
+			qty = quantityComponent * compositeQuantity;
+			info qty;
+			currentdate = zoho.currentdate.toString("YYYY-MM-dd");
+			info currentdate;
+			reason = "compositeitems-onpurchase";
+			items = Map();
+			items.put("item_id",componentId);
+			items.put("quantity_adjusted",qty);
+			lineItems = List();
+			lineItems.add(items);
+			json = Map();
+			json.put("date",currentdate);
+			json.put("reason",reason);
+			json.put("line_items",lineItems);
+			param = Map();
+			param.put("JSONString",json);
+			info param;
+			adjustItem = invokeurl
+			[
+				url :"https://inventory.zoho.com.au/api/v1/inventoryadjustments?organization_id=" + organizationID
+				type :POST
+				parameters:param
+				connection:"zom"
+			];
+			info adjustItem;
+		}
+		*/
+	}
+}
+/*
+
+billID = bill.get("bill_id");
+billDate = bill.get("date").toDate();
+organizationID = organization.get("organization_id");
+bil = invokeurl
+[
+	url :"https://inventory.zoho.com.au/api/v1/bills/" + billID + "?organization_id=" + organizationID
+	type :GET
+	connection:"zom"
+];
+//info bil;
+temp = bil.get("bill");
+//info temp; 
+line_items = temp.get("line_items");
+//info lineItems;
+for each  lineItem in line_items
+{
+	compositeItemID = lineItem.get("item_id");
+	quantityBill = lineItem.get("quantity").toLong();
+}
+*/
+
