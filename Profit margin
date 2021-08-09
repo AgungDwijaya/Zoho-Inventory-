@@ -1,0 +1,104 @@
+
+estimateID = estimate.get("estimate_id");
+estimatedate = estimate.get("date").toDate();
+organizationID = organization.get("organization_id");
+customerID = estimate.get("customer_id");
+estimateUrl = "https://books.zoho.com.au/api/v3/estimates/editpage?estimate_id=" + estimateID + "&organization_id=" + organizationID;
+estimateDetails = invokeurl
+[
+	url :estimateUrl
+	type :GET
+	connection:"zom"
+];
+estimateDetails = estimateDetails.get("estimate");
+estimateItem = estimateDetails.get("line_items").toList();
+iList = List();
+totGmargin = 0;
+totCOGS = 0;
+for each  findItem in estimateItem
+{
+	perUnitDiscount = 0;
+	itemSellingPrice = 0;
+	itemPurchasePrice = 0;
+	discountAmt = 0;
+	gMargin = 0;
+	iMap = Map();
+	item = findItem.toMap();
+	itemID = item.get("item_id");
+	//purRate = item.get("bcy_rate");
+	discount = findItem.get("discount");
+	discountAmt = findItem.get("discount_amount");
+	quantity = findItem.get("quantity").toDecimal();
+	if(discountAmt.isNull())
+	{
+		discountAmt = 0;
+	}
+	else
+	{
+		perUnitDiscount = discountAmt / quantity;
+		perUnitDiscount = perUnitDiscount.round(2);
+	}
+	getItemPurchasePrice = if(findItem.get("purchase_rate") != "",findItem.get("purchase_rate"),0);
+	unitSalesRate = findItem.get("bcy_rate").toDecimal();
+	if(getItemPurchasePrice.isNull())
+	{
+		unitPurchaseRate = 0;
+	}
+	else
+	{
+		unitPurchaseRate = getItemPurchasePrice.toDecimal();
+	}
+	unitMargin = unitSalesRate.toDecimal() - unitPurchaseRate;
+	unitMargin = unitMargin - perUnitDiscount;
+	totItemMargin = unitMargin * quantity;
+	totGmargin = totGmargin + totItemMargin;
+	getItemPurchasePrice = getItemPurchasePrice * quantity;
+	totCOGS = totCOGS + getItemPurchasePrice;
+	itemList = List();
+	itemCF = findItem.get("item_custom_fields").toList();
+	for each  findItemCF in itemCF
+	{
+		itemMap = Map();
+		itemLab = findItemCF.get("label");
+		itemVal = findItemCF.get("value");
+		itemMap.put("label",itemLab);
+		itemMap.put("value",itemVal);
+		itemList.add(itemMap);
+	}
+	itemMap = Map();
+	itemMap.put("label","Margin per unit");
+	//Replace Marge per unit with item custom field name
+	itemMap.put("value",unitMargin);
+	itemList.add(itemMap);
+	findItem.remove("item_custom_fields");
+	findItem.put("item_custom_fields",itemList);
+	iList.add(findItem);
+}
+//bMap = Map();
+// bList = List();
+// bMap.put("label","COGS");
+// bMap.put("value",totCOGS);
+// bList.add(bMap);
+cMap = Map();
+cList = List();
+cMap.put("label","Total Margin");
+//Replace Total Margin with estimate custom field name
+cMap.put("value",totGmargin);
+cList.add(cMap);
+json = Map();
+json.put("line_items",iList);
+json.put("custom_fields",cList);
+//json.put("custom_fields",bList);
+json.put("customer_id",customerID);
+params = Map();
+params.put("JSONString",json);
+updateEstUrl = "https://books.zoho.com.au/api/v3/estimates/" + estimateID + "?organization_id=" + organizationID;
+updateRecord = invokeurl
+[
+	url :updateEstUrl
+	type :PUT
+	parameters:params
+	connection:"zom"
+];
+info updateRecord.get("message");
+
