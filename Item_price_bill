@@ -1,0 +1,36 @@
+
+//bill is open. 
+billID = bill.get("bill_id");
+billDate = bill.get("date").toDate();
+organizationID = organization.get("organization_id");
+bil = invokeurl
+[
+	url :"https://inventory.zoho.com.au/api/v1/bills/" + billID + "?organization_id=" + organizationID
+	type :GET
+	connection:"zom"
+];
+//info bil; 
+temp = bil.get("bill");
+//info temp; 
+lineItems = temp.get("line_items");
+info lineItems;
+for each  lineItem in lineItems
+{
+	costprice = lineItem.get("rate").toDecimal();
+	info costprice;
+	itemID = lineItem.get("item_id");
+	json = Map();
+	json.put("purchase_rate",costprice);
+	param = Map();
+	param.put("JSONString",json);
+	info param;
+	itemDetails = invokeurl
+	[
+		url :"https://inventory.zoho.com.au/api/v1/items/" + itemID + "?organization_id=" + organizationID
+		type :PUT
+		parameters:param
+		connection:"zom"
+	];
+	info itemDetails.get("message");
+}
+
