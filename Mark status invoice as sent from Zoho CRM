@@ -1,0 +1,64 @@
+organization_id = "714961169";
+sales_entry = zoho.crm.getRecordById("Deals",dealid);
+product_details = sales_entry.get("Order_Details");
+account_detail = sales_entry.get("Account_Name");
+account_id = account_detail.get("id");
+cust = Map();
+cust.put("contact_name",account_detail.getJson("name"));
+customer = zoho.inventory.getRecords("Contacts",organization_id,cust,"zohocrmtoinventory");
+cust_id = customer.getJson("contacts").getJson("contact_id");
+sales_map = Map();
+product_list = List();
+for each  product in product_details
+{
+	product_entry = product.get("Product_Name");
+	//get the product_item_name from product_entry
+	product_item_name = product_entry.get("name");
+	product_item_quantity = product.get("Qty");
+	product_item_total = product.get("total");
+	sales_map.put("name",product_item_name);
+	sales_map.put("rate",product_item_total);
+	sales_map.put("Qty",product_item_quantity);
+	product_list.add(sales_map);
+}
+// today_date = zoho.currentdate;
+// inventory_map = Map();
+// inventory_map.put("customer_id",cust_id);
+// inventory_map.put("zcrm_account_id",account_id);
+// inventory_map.put("line_items",product_list);
+// inventory_map.put("date",today_date);
+// create_entry = zoho.inventory.createRecord("Salesorders",organization_id,inventory_map,"zohocrmtoinventory");
+// salesorderID = create_entry.get("salesorder").get("salesorder_id");
+// info "pler1" + create_entry;
+// create_invoice = zoho.inventory.createRecord("invoices",organization_id,inventory_map,"zohocrmtoinventory");
+// info "pler2" + create_invoice;
+invoicesID = sales_entry.get("Invoice_ID");
+// info invoicesID;
+// info "pler2" + create_invoice;
+// dealid_map = Map();
+// dealid_map.put("Sales_Order_ID",salesorderID);
+// dealid_map.put("Invoice_ID",invoicesID);
+// updateID = zoho.crm.updateRecord("Deals",dealid,dealid_map);
+//response = zoho.inventory.updateRecord("invoices", organization_id,invoicesID, new_values);
+response = zoho.inventory.markStatus("invoices",organization_id,invoicesID,"sent","zohocrmtoinventory");
+info response;
+// info create_entry;
+// salesorderID = create_entry.get("salesorder").get("salesorder_id");
+// respond = invokeurl
+// [
+// 	url :"https://inventory.zoho.com/api/v1/invoices/fromsalesorder?organization_id=" + organization_id + "&salesorder_id=" + salesorderID
+// 	type :POST
+// 	connection:"zohocrmtoinventory"
+// ];
+//info respond.toMap().get("message");
+// response = zoho.inventory.getRecords("invoices", organization_id, respond);
+// info response;
+// InvoiceID = respond.get("invoices").get("invoice_id");
+// //info InvoiceID;
+// respond2 = invokeurl
+// [
+// 	url :"https://inventory.zoho.com/api/v1/invoices/" + InvoiceID + "?organization_id=" + organization_id
+// 	type :GET
+// 	connection:"zohocrmtoinventory"
+// ];
+// info respond2;
