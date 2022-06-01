@@ -1,0 +1,42 @@
+organization_id = "714961169";
+sales_entry = zoho.crm.getRecordById("Deals",dealid);
+POnum="";
+POnum = sales_entry.get("Purchase_Order_No");
+salesorderID = sales_entry.get("Sales_Order_ID");
+//info salesorderID;
+respond = invokeurl
+[
+	url :"https://inventory.zoho.com/api/v1/invoices/fromsalesorder?organization_id=" + organization_id + "&salesorder_id=" + salesorderID
+	type :POST
+	connection:"zohocrmtoinventory"
+];
+//info respond;
+if(respond.getJson("code") == 0)
+{
+	info 1;
+	InvoiceId = respond.get("invoice").get("invoice_id");
+	info InvoiceId;
+	dealid_map = Map();
+	dealid_map.put("Invoice_ID",InvoiceId);
+	updateID = zoho.crm.updateRecord("Deals",dealid,dealid_map);
+}
+cfs = List();
+m = Map();
+n = Map();
+m.put("api_name","cf_shipping_status");
+n.put("api_name","cf_purchase_order_no");
+n.put("value",POnum);
+m.put("value","Awaiting Payment");
+
+
+cfs.add(m);
+cfs.add(n);
+info cfs;
+json=Map();
+json.put("custom_fields",cfs);
+
+info json;
+
+response1 = zoho.inventory.updateRecord("Invoices",organization_id,InvoiceId,json,"zohocrmtoinventory");
+info response1.get("message");
+response = zoho.inventory.markStatus("invoices",organization_id,InvoiceId,"sent","zohocrmtoinventory");
