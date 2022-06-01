@@ -1,0 +1,96 @@
+
+salesorderID = salesorder.get("salesorder_id");
+salesorderdate = salesorder.get("date").toDate();
+organizationID = organization.get("organization_id");
+sal = zoho.inventory.getRecordsByID("Salesorders",organizationID,salesorderID,"zinventory").get("salesorder");
+saleschannel = sal.get("sales_channel");
+if(saleschannel.equalsIgnoreCase("shopify"))
+{
+	cfs = List();
+	cf = Map();
+	cf.put("api_name","cf_orders");
+	cf.put("value","Shopify");
+	cfs.add(cf);
+	json = Map();
+	json.put("custom_fields",cfs);
+	response = zoho.inventory.updateRecord("Salesorders",organizationID,salesorderID,json,"zinventory");
+	info response;
+}
+else
+{
+	info "Not a shopify order";
+}
+sal = invokeurl
+[
+	url :"https://inventory.zoho.com/api/v1/salesorders/" + salesorderID + "?organization_id=" + organizationID
+	type :GET
+	connection:"zinventory"
+];
+//info sal;
+temp = sal.get("salesorder");
+//info temp;
+new = temp.get("sales_channel");
+if(new.equalsIgnoreCase("shopify"))
+{
+	res = invokeurl
+	[
+		url :"https://inventory.zoho.com/api/v1/invoices/fromsalesorder?salesorder_id=" + salesorderID + "&organization_id=" + organizationID
+		type :POST
+		connection:"zinventory"
+	];
+	info res.get("message");
+	inv = res.get("invoice");
+	invoiceID = inv.get("invoice_id");
+	invoicedate = inv.get("date").toDate();
+	respond = invokeurl
+	[
+		url :"https://inventory.zoho.com/api/v1/invoices/" + invoiceID + "/status/sent?organization_id=" + organizationID
+		type :POST
+		connection:"zinventory"
+	];
+	info respond.toMap().get("message");
+	customerID = inv.get("customer_id").toString();
+	pays = Map();
+	amount = inv.get("total");
+	taxes = inv.get("tax_amount_withheld");
+	invoices = List();
+	maper = Map();
+	maper.put("invoice_id",invoiceID);
+	maper.put("amount_applied",amount);
+	maper.put("tax_amount_withheld",taxes);
+	invoices.add(maper);
+	pays.put("customer_id",customerID);
+	pays.put("payment_mode","Petty Cash");
+	pays.put("amount",amount);
+	pays.put("invoices",invoices);
+	pays.put("account_id","2257687000000000361");
+	pays.put("date",invoicedate);
+	info pays;
+	jsonstring = Map();
+	jsonstring.put("JSONString",pays);
+	res = invokeurl
+	[
+		url :"https://inventory.zoho.com/api/v1/customerpayments?organization_id=" + organizationID
+		type :POST
+		parameters:jsonstring
+		connection:"zinventory"
+	];
+	info res.toMap().get("message");
+}
+else
+{
+	info "It is not a shopify order";
+}
+customerID = salesorder.get("customer_id");
+info customerID;
+companyName = salesorder.get("company_name");
+//organizationID = organization.get("organization_id");
+updatecfs=List();
+updatecf=Map();
+updatecf.put("api_name","cf_account_type");
+updatecf.put("value","B2C - Shopify");
+updatecfs.add(updatecf);
+json=Map();
+json.put("custom_fields",updatecfs);
+updateresponse=zoho.inventory.updateRecord("Contacts",organizationID,customerID,json,"zinventory");
+info updateresponse.get("message");
